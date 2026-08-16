@@ -47,6 +47,9 @@ assert(html.includes('data/ru.js'), 'не подключена русская л
 assert(html.includes('https://www.korbdo.co.kr/#tachyon'), 'не указана страница разработчика оригинальной карты');
 assert(html.includes('Оригинальная карта принадлежит разработчику'), 'нет явного указания владельца оригинальной карты');
 assert(html.includes('id="map-stage"'), 'нет центрированного контейнера карты');
+assert(!html.includes('Следы и наследие Тахиона с отметками прохождения'), 'остался лишний подзаголовок');
+assert(!html.includes('244 точки · 349 скриншотов'), 'остался лишний счётчик материалов');
+assert(!html.includes('Русская локализация · прогресс сохраняется в этом браузере'), 'осталась лишняя подпись в подвале');
 assert(html.includes('stage.clientWidth'), 'canvas не привязан к ширине контейнера');
 assert(html.includes('stage.clientHeight'), 'canvas не привязан к высоте контейнера');
 assert(!html.includes('cloudflareinsights.com'), 'остался внешний скрипт Cloudflare');
