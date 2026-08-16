@@ -1,0 +1,759 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Внутренняя Идания — следы и наследие Тахиона</title>
+<style>
+  :root {
+    --page-bg: #0d1c1d; --bg: #183435; --panel: #161b22e6; --line: #2b3440;
+    --fg: #e6edf3; --dim: #8b949e; --accent: #ffd54a;
+    --stage-border: #385153; --stage-shadow: #02070780;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%;
+    background: var(--page-bg); color: var(--fg);
+    font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { min-height: 100vh; }
+  .page-shell { width: min(1500px, 100%); margin: 0 auto; padding: 22px 28px 18px; }
+  .site-header { display: flex; align-items: end; justify-content: space-between; gap: 24px;
+    padding: 0 2px 14px; }
+  .site-header h1 { margin: 0; font-size: clamp(20px, 2.1vw, 30px); line-height: 1.15;
+    letter-spacing: -.45px; }
+  .site-header p { margin: 5px 0 0; color: var(--dim); font-size: 13px; }
+  .site-stats { flex: none; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .map-stage { position: relative; width: 100%; height: clamp(600px, 78vh, 820px);
+    overflow: hidden; isolation: isolate; background: var(--bg); border: 1px solid var(--stage-border);
+    border-radius: 16px; box-shadow: 0 20px 60px var(--stage-shadow); }
+  .site-footer { display: flex; justify-content: space-between; gap: 16px; padding: 12px 2px 0;
+    color: var(--dim); font-size: 11.5px; }
+  .site-footer a { color: #b8c9ca; text-underline-offset: 3px; }
+  #map { position: absolute; inset: 0; cursor: grab; touch-action: none; }
+  #map.drag { cursor: grabbing; }
+
+  .panel { position: absolute; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; backdrop-filter: blur(8px); }
+
+  #ui { top: 12px; left: 12px; width: min(292px, calc(100vw - 24px)); padding: 12px 14px; }
+  #ui h2 { margin: 0 0 8px; font-size: 15px; letter-spacing: -.2px; }
+  #ui-head { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  #ui-caret { flex: none; color: var(--accent); font-size: 12px; font-weight: 600; opacity: .85; }
+  #ui-head:hover #ui-caret { opacity: 1; text-decoration: underline; }
+  #ui.collapsed #ui-body { display: none; }
+
+  #q { width: 100%; background: #0d1117; color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 9px; font-size: 12.5px; font-family: inherit; }
+  #q:focus-visible, button:focus-visible, .layer:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #hits { margin: 6px 0 0; max-height: 190px; overflow-y: auto; }
+  #hits div { padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px;
+    display: flex; gap: 8px; align-items: center; }
+  #hits div:hover { background: #ffffff14; }
+  #hits .a { color: var(--dim); font-size: 11px; margin-left: auto; }
+  #hits .none { color: var(--dim); cursor: default; }
+  #hits .off { opacity: .45; }
+
+  .layer { display: flex; align-items: center; gap: 8px; padding: 5px 6px;
+    border-radius: 6px; cursor: pointer; user-select: none; }
+  .layer:hover { background: #ffffff0e; }
+  .layer input { accent-color: var(--accent); margin: 0; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none;
+    box-shadow: 0 0 0 1.5px #0009; }
+  .layer .nm { flex: 1; }
+  .layer .ct { color: var(--dim); font-variant-numeric: tabular-nums; font-size: 11px; }
+
+  #prog { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #prog b { color: var(--fg); }
+  #prog .prog-h { color: var(--fg); font-weight: 700; margin-bottom: 4px; }
+  #prog .prog-row { line-height: 1.7; }
+  #prog .prog-pct { color: var(--dim); }
+  #prog .prog-k { color: var(--fg); }
+  #prog .prog-coin { display: flex; align-items: center; gap: 6px; color: var(--fg);
+    white-space: nowrap;
+    padding-bottom: 7px; margin-bottom: 7px; border-bottom: 1px solid var(--line); }
+  #prog .prog-coin-ic { width: 18px; height: 18px; flex: none; image-rendering: -webkit-optimize-contrast; }
+
+  .row { display: flex; gap: 6px; margin-top: 8px; }
+  button { flex: 1; background: #21262d; color: var(--fg); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 8px; cursor: pointer; font-size: 12px;
+    font-family: inherit; }
+  button:hover { background: #30363d; }
+  button.on { background: #2d5a3d; border-color: #3d7a52; }
+
+  #tip { position: absolute; pointer-events: none; padding: 6px 9px; font-size: 12px;
+    background: #0d1117f2; border: 1px solid var(--line); border-radius: 7px;
+    display: none; white-space: nowrap; z-index: 5; }
+  #tip .k, .k { color: var(--dim); font-size: 11px; }
+
+  #sel { display: none; padding: 9px 11px; width: 210px; z-index: 6; }
+  #sel .t { font-weight: 600; margin-bottom: 2px; }
+  #sel .sel-coin { display: flex; align-items: center; gap: 5px; color: var(--fg); font-size: 12px; }
+  #sel .sel-coin .prog-coin-ic { width: 14px; height: 14px; }
+  #sel .sel-area { margin-top: 3px; }
+
+  #toast { left: 50%; bottom: 26px; transform: translateX(-50%); padding: 8px 14px;
+    font-size: 12.5px; opacity: 0; transition: opacity .25s; pointer-events: none; }
+
+  /* 선택 마커의 이미지 섬네일 */
+  #sel-imgs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+  #sel-imgs:empty { display: none; }
+  #sel-imgs img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px;
+    border: 1px solid var(--line); cursor: zoom-in; background: #0d1117; }
+  #sel-imgs img:hover { border-color: var(--accent); }
+
+  /* 이미지 크게 보기(라이트박스) */
+  #lb { position: fixed; inset: 0; background: #000000e8; display: none;
+    align-items: center; justify-content: center; z-index: 50; touch-action: pan-y; }
+  #lb.open { display: flex; }
+  #lb img { max-width: 92vw; max-height: 88vh; object-fit: contain; border-radius: 8px;
+    box-shadow: 0 10px 50px #000a; user-select: none; -webkit-user-drag: none; }
+  #lb .nav { position: absolute; top: 50%; transform: translateY(-50%);
+    width: 52px; height: 52px; border-radius: 50%; background: #ffffff1a;
+    border: 1px solid #ffffff33; color: #fff; font-size: 26px; line-height: 1;
+    cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lb .nav:hover { background: #ffffff33; }
+  #lb #lb-prev { left: 18px; } #lb #lb-next { right: 18px; }
+  #lb #lb-close { top: 16px; right: 18px; transform: none; width: 42px; height: 42px; font-size: 20px; }
+  #lb #lb-count { position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 13px; background: #0009; padding: 4px 12px; border-radius: 20px;
+    font-variant-numeric: tabular-nums; }
+  #lb #lb-title { position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
+    max-width: 80vw; text-align: center; color: #fff; font-size: 15px; font-weight: 700;
+    text-shadow: 0 1px 4px #000c; letter-spacing: -.2px; }
+  #lb #lb-credit { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    color: #b9c2cc; font-size: 11.5px; text-shadow: 0 1px 3px #000c; }
+  /* 이미지/맵 우클릭 저장 방지 */
+  #lb img, #sel-imgs img, #map { -webkit-touch-callout: none; }
+  @media (pointer: coarse) {
+    button, .layer { min-height: 44px; }
+  }
+  @media (max-width: 700px) {
+    .page-shell { padding: 10px; }
+    .site-header { align-items: start; padding: 2px 2px 10px; }
+    .site-header h1 { font-size: 19px; }
+    .site-header p { margin-top: 3px; font-size: 11.5px; }
+    .site-stats { display: none; }
+    .map-stage { height: clamp(540px, 72svh, 640px); border-radius: 12px; }
+    .site-footer { flex-direction: column; gap: 2px; padding: 8px 2px 0; font-size: 10.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-shell">
+<header class="site-header">
+  <div>
+    <h1>Карта внутренней Идании</h1>
+    <p>Следы и наследие Тахиона с отметками прохождения</p>
+  </div>
+  <div class="site-stats">244 точки · 349 скриншотов</div>
+</header>
+
+<main id="map-stage" class="map-stage" aria-label="Интерактивная карта внутренней Идании">
+
+<canvas id="map" aria-label="Поле интерактивной карты"></canvas>
+
+<div id="ui" class="panel collapsed">
+  <h2 id="ui-head" tabindex="0">Внутренняя Идания <span id="ui-caret">Развернуть</span></h2>
+  <input id="q" aria-label="Поиск по карте" placeholder="Поиск — наследие 46, след XLVI…" autocomplete="off">
+  <div id="hits"></div>
+  <div id="ui-body">
+    <div id="layers"></div>
+    <div id="prog"></div>
+    <div class="row">
+      <button id="btn-fit">Вся карта</button>
+      <button id="btn-reset">Сбросить</button>
+    </div>
+    <div class="row">
+      <button id="btn-export">Сохранить</button>
+      <button id="btn-import">Загрузить</button>
+    </div>
+    <input id="file-import" type="file" hidden>
+  </div>
+</div>
+
+<div id="sel" class="panel">
+  <div class="t" id="sel-t"></div>
+  <div class="k" id="sel-s"></div>
+  <div id="sel-imgs"></div>
+  <div class="row">
+    <button id="sel-done"></button>
+  </div>
+</div>
+
+<div id="tip"></div>
+<div id="toast" class="panel"></div>
+</main>
+
+<footer class="site-footer">
+  <a href="https://www.korbdo.co.kr/#tachyon" target="_blank" rel="noopener noreferrer">Оригинальная карта принадлежит разработчику сайта korbdo.co.kr</a>
+  <span>Русская локализация · прогресс сохраняется в этом браузере</span>
+</footer>
+</div>
+
+<div id="lb">
+  <div id="lb-title"></div>
+  <button class="nav" id="lb-close" aria-label="Закрыть просмотр">✕</button>
+  <button class="nav" id="lb-prev" aria-label="Предыдущий скриншот">‹</button>
+  <img id="lb-img" alt="">
+  <button class="nav" id="lb-next" aria-label="Следующий скриншот">›</button>
+  <div id="lb-count"></div>
+  <div id="lb-credit">Источник изображений: Black Desert Inven — Канат</div>
+</div>
+
+<script src="data/tiles.js"></script>
+<script src="data/markers.js"></script>
+<script src="data/images.js"></script>
+<script src="data/ru.js"></script>
+<script>
+// index.html 과 같은 데이터/타일을 쓰되 에다니아 영역 밖으로 못 나가게 잠근 버전.
+// + 검색 / 습득 완료 체크(localStorage).
+const M = window.MARKERS, TILES = window.TILES || {};
+const W = M.meta.world;
+const SECTOR = W.sector, TILE = W.tile;
+const WORLD_X0 = W.sx0 * SECTOR, WORLD_Z1 = (W.sz1 + 1) * SECTOR;
+const LEVELS = W.levels.slice().sort((a, b) => a - b);
+
+const toU = wx => (wx - WORLD_X0) / SECTOR;
+const toV = wz => (WORLD_Z1 - wz) / SECTOR;
+const toWX = u => WORLD_X0 + u * SECTOR;
+const toWZ = v => WORLD_Z1 - v * SECTOR;
+
+const OCEAN = '#183435';                       // rader 타일의 바다색
+const stage = document.getElementById('map-stage');
+const cv = document.getElementById('map'), ctx = cv.getContext('2d');
+const tipEl = document.getElementById('tip'), selEl = document.getElementById('sel');
+let DPR = 1, VW = 0, VH = 0;
+
+const CHEST = ['relic', 'trace'];
+const ALLCHEST = CHEST.flatMap(id => M.points[id] || []);
+// 마커 반지름 — 상자를 다른 마커보다 살짝만 크게
+const radius = id => CHEST.includes(id) ? Math.max(2.8, Math.min(6.5, view.k * .22))
+                                        : Math.max(2.2, Math.min(5.0, view.k * .17));
+
+const on = {};
+for (const id in M.points) on[id] = true;
+
+// 지식(klore)도 완료 대상 — 지식 id(k)는 여러 NPC가 공유하므로, NPC '위치'별로 개별 완료 처리.
+//  num 은 좌표 기반 고유 키(데이터 순서 바뀌어도 저장값 안정).
+if (M.points.klore) M.points.klore.forEach(p => { if (!p.kind) { p.kind = '지식'; p.num = Math.round(p.x) + '_' + Math.round(p.z); } });
+// 완료 집계 대상: 유산·흔적·지식
+const DONEABLE = ['relic', 'trace', 'klore'].flatMap(id => M.points[id] || []);
+
+// ── 습득 완료 (지식 단위로 저장 — 상자가 2곳인 흔적은 같이 처리된다)
+const STORE = 'bdo_tachyon_done_ru_v1';
+const keyOf = p => `${p.kind}-${p.num}`;
+// Храним прогресс локально; cookie оставлен для совместимости с исходной картой.
+function _getCookie(n){ const m = document.cookie.match('(?:^|; )' + n.replace(/([.$?*|{}()\[\]\\\/\+^])/g,'\\$1') + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; }
+function _setCookie(n, v){ document.cookie = n + '=' + encodeURIComponent(v) + '; path=/; max-age=' + (3600*24*365*2) + '; SameSite=Lax'; }
+let DONE = new Set();
+try { DONE = new Set(JSON.parse(localStorage.getItem(STORE) || _getCookie(STORE) || '[]')); } catch (e) {}
+const saveDone = () => {
+  const value = JSON.stringify([...DONE]);
+  try { localStorage.setItem(STORE, value); } catch (e) {}
+  try { _setCookie(STORE, value); } catch (e) {}
+};
+const isDone = p => p.kind && DONE.has(keyOf(p));
+
+// ── 마커별 업로드 이미지(지식/유산/흔적). keyOf 우선, 없으면 이름 키(예: 기가고드 전용 폴더).
+const IMG = window.IMAGES || {};
+const imagesFor = p => IMG[keyOf(p)] || IMG['name-' + (p.assetName || p.n || '')] || [];
+// 이미지 파일 캐시버스터 — 이미지 교체 시 이 숫자만 올리면 새로 받는다.
+const IMGV = '1786619717';
+const imgURL = src => encodeURI(src) + '?v=' + IMGV;
+
+// ── 볼 수 있는 범위 = 마커 전체를 감싸는 상자 + 여유
+const PAD = 2.5;
+const BOX = (() => {
+  let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+  for (const id in M.points) for (const p of M.points[id]) {
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x);
+    z0 = Math.min(z0, p.z); z1 = Math.max(z1, p.z);
+  }
+  return { u0: toU(x0) - PAD, u1: toU(x1) + PAD, v0: toV(z1) - PAD, v1: toV(z0) + PAD };
+})();
+const BOXW = BOX.u1 - BOX.u0, BOXH = BOX.v1 - BOX.v0;
+
+const view = { u: (BOX.u0 + BOX.u1) / 2, v: (BOX.v0 + BOX.v1) / 2, k: 8 };
+let sel = null;                                 // 선택된 마커
+
+// ── 타일 캐시
+const cache = new Map();
+const have = {};
+for (const l in TILES) have[l] = new Set(TILES[l]);
+
+function tileImg(lvl, tx, ty) {
+  const key = lvl + '/' + tx + '_' + ty;
+  let im = cache.get(key);
+  if (im !== undefined) return im;
+  if (have[lvl] && !have[lvl].has(tx + '_' + ty)) { cache.set(key, null); return null; }
+  im = new Image();
+  im.onload = () => draw();
+  im.onerror = () => cache.set(key, null);
+  im.src = `img/tiles/L${lvl}/${tx}_${ty}.webp`;
+  cache.set(key, im);
+  return im;
+}
+
+function pickLevel() {
+  for (const l of LEVELS) if (l >= view.k) return l;      // 축소만, 확대는 안 함
+  return LEVELS[LEVELS.length - 1];
+}
+
+const sx = u => (u - view.u) * view.k + VW / 2;
+const sy = v => (v - view.v) * view.k + VH / 2;
+const ux = px => (px - VW / 2) / view.k + view.u;
+const vy = py => (py - VH / 2) / view.k + view.v;
+const kFit = () => Math.min(VW / BOXW, VH / BOXH);
+
+function clamp() {
+  view.k = Math.max(kFit(), Math.min(256, view.k));
+  const hu = VW / (2 * view.k), hv = VH / (2 * view.k);
+  view.u = hu * 2 >= BOXW ? (BOX.u0 + BOX.u1) / 2
+                          : Math.max(BOX.u0 + hu, Math.min(BOX.u1 - hu, view.u));
+  view.v = hv * 2 >= BOXH ? (BOX.v0 + BOX.v1) / 2
+                          : Math.max(BOX.v0 + hv, Math.min(BOX.v1 - hv, view.v));
+}
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  VW = stage.clientWidth; VH = stage.clientHeight;
+  cv.width = VW * DPR; cv.height = VH * DPR;
+  cv.style.width = VW + 'px'; cv.style.height = VH + 'px';
+  clamp(); draw();
+}
+
+function draw() {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, VW, VH);
+  ctx.fillStyle = OCEAN;          // 타일 없는 곳은 전부 바다다
+  ctx.fillRect(0, 0, VW, VH);
+
+  // ── 타일
+  const lvl = pickLevel();
+  const span = TILE / lvl, px = span * view.k;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  for (let ty = Math.floor(vy(0) / span); ty < Math.ceil(vy(VH) / span); ty++) {
+    for (let tx = Math.floor(ux(0) / span); tx < Math.ceil(ux(VW) / span); tx++) {
+      if (tx < 0 || ty < 0) continue;
+      const im = tileImg(lvl, tx, ty);
+      if (!im || !im.complete || !im.naturalWidth) continue;
+      ctx.drawImage(im, sx(tx * span), sy(ty * span), px + 1, px + 1);
+    }
+  }
+
+  // ── 마커
+  for (const id of ['npc', 'node', 'klore', 'trace', 'relic']) {
+    if (!on[id] || !M.points[id]) continue;
+    const r = radius(id);
+    const col = M.meta.layers[id].color;
+    ctx.lineWidth = Math.max(1, r * .35);
+    for (const p of M.points[id]) {
+      const X = sx(toU(p.x)), Y = sy(toV(p.z));
+      if (X < -20 || Y < -20 || X > VW + 20 || Y > VH + 20) continue;
+      ctx.globalAlpha = isDone(p) ? .45 : 1;
+      ctx.fillStyle = col; ctx.strokeStyle = '#0b0f14cc';
+      ctx.beginPath(); ctx.arc(X, Y, r, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (sel && sel.p === p) {                  // 선택 표시
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(X, Y, r * 2.1, 0, 7); ctx.stroke();
+        ctx.lineWidth = Math.max(1, r * .35);
+      }
+    }
+  }
+
+  // ── 라벨: '유산 X' / '흔적 X' / '지식'
+  const labels = [];
+  const dy = radius('relic') + 10;
+  for (const id of ['relic', 'trace']) {
+    if (!on[id] || !M.points[id]) continue;
+    const col = id === 'relic' ? '#ffe9a3' : '#ffb3b3';
+    for (const p of M.points[id])
+      // 번호가 없는 지점(버그 상자 등)은 이름을 그대로 쓴다
+      labels.push({ p, t: p.rom ? `${RU_KIND[p.kind] || p.kind} ${p.rom}` : p.n, col, dy });
+  }
+  if (on.klore && M.points.klore && view.k >= 26)
+    for (const p of M.points.klore)
+      labels.push({ p, t: 'Знания', col: '#bfe6ff', dy: radius('klore') + 9 });
+
+  const FS = (document.fullscreenElement || document.webkitFullscreenElement) ? 1.45 : 1;
+  if (view.k >= 16) {
+    ctx.font = '700 ' + Math.round(12 * FS) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3.5; ctx.strokeStyle = '#0b0f14e6';
+    const put = [];
+    for (const L of labels) {
+      const X = sx(toU(L.p.x)), Y = sy(toV(L.p.z)) + L.dy;
+      if (X < 0 || Y < 0 || X > VW || Y > VH) continue;
+      const w = ctx.measureText(L.t).width + 8;
+      if (put.some(q => Math.abs(q[0] - X) < (q[2] + w) / 2 && Math.abs(q[1] - Y) < 13)) continue;
+      put.push([X, Y, w]);
+      ctx.globalAlpha = isDone(L.p) ? .45 : 1;
+      ctx.fillStyle = L.col;
+      ctx.strokeText(L.t, X, Y); ctx.fillText(L.t, X, Y);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // ── 거점 이름
+  if (on.node && M.points.node) {
+    ctx.font = '600 ' + Math.round(11 * FS) + 'px system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#0b0f14cc'; ctx.fillStyle = '#dbe7c9';
+    for (const p of M.points.node) {
+      const X = sx(toU(p.x)), Y = sy(toV(p.z));
+      if (X < 0 || Y < 0 || X > VW || Y > VH) continue;
+      const t = p.n.split('—').pop().trim();
+      ctx.strokeText(t, X, Y - 7); ctx.fillText(t, X, Y - 7);
+    }
+  }
+  placeSel();
+}
+
+// ── 선택 패널
+function placeSel() {
+  if (!sel) { selEl.style.display = 'none'; return; }
+  const X = sx(toU(sel.p.x)), Y = sy(toV(sel.p.z));
+  selEl.style.display = 'block';
+  selEl.style.left = Math.max(8, Math.min(X + 16, VW - selEl.offsetWidth - 8)) + 'px';
+  selEl.style.top = Math.max(8, Math.min(Y + 14, VH - selEl.offsetHeight - 8)) + 'px';
+}
+
+function select(p, id) {
+  sel = { p, id };
+  document.getElementById('sel-t').textContent = p.n;
+  const base = CHEST.includes(id) ? `${p.a}${p.card ? ' · знание ' + p.card : ''}`
+                                  : `${M.meta.layers[id].label}`;
+  const coin = CHEST.includes(id) ? coinOf(p, id) : null;
+  document.getElementById('sel-s').innerHTML =
+    (coin != null ? `<div class="sel-coin"><img class="prog-coin-ic" src="${imgURL('img/00890085.webp')}" alt="Золотая монета Агриса">Золотые монеты: ${coin}</div>` : '') +
+    `<div class="sel-area">${base}</div>`;
+  const b = document.getElementById('sel-done');
+  b.style.display = p.kind ? '' : 'none';
+  b.textContent = isDone(p) ? 'Отменить отметку' : 'Отметить пройденным';
+  b.classList.toggle('on', isDone(p));
+  // 섬네일
+  const imgs = imagesFor(p);
+  const gal = document.getElementById('sel-imgs');
+  gal.innerHTML = '';
+  imgs.forEach((src, i) => {
+    const im = document.createElement('img');
+    im.src = imgURL(src); im.loading = 'lazy'; im.alt = p.n;
+    im.onclick = () => openLb(imgs, i, p.n);
+    gal.appendChild(im);
+  });
+  draw();
+}
+
+document.getElementById('sel-done').onclick = () => {
+  if (!sel || !sel.p.kind) return;
+  const k = keyOf(sel.p);
+  DONE.has(k) ? DONE.delete(k) : DONE.add(k);
+  saveDone(); select(sel.p, sel.id); progress(); search();
+};
+// 마커 선택 상태에서 스페이스바/엔터 → 완료 토글 (검색 입력 중·이미지 열림 중 제외)
+addEventListener('keydown', e => {
+  if (lbEl.classList.contains('open')) return;
+  if (document.activeElement === document.getElementById('q')) return;
+  if ((e.key === ' ' || e.key === 'Enter') && sel && sel.p.kind) {
+    e.preventDefault();
+    document.getElementById('sel-done').click();
+  }
+});
+
+// ── 상호작용
+let drag = null;
+cv.addEventListener('pointerdown', e => {
+  drag = { x: e.clientX, y: e.clientY, u: view.u, v: view.v };
+  cv.setPointerCapture(e.pointerId); cv.classList.add('drag');
+});
+cv.addEventListener('pointerup', e => {
+  if (drag && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) {
+    const near = nearest(e);
+    if (near) select(near.p, near.id);
+    else { sel = null; draw(); }
+  }
+  drag = null; cv.classList.remove('drag');
+});
+cv.addEventListener('pointermove', e => {
+  if (drag) {
+    view.u = drag.u - (e.clientX - drag.x) / view.k;
+    view.v = drag.v - (e.clientY - drag.y) / view.k;
+    clamp(); draw(); tipEl.style.display = 'none';
+    return;
+  }
+  hover(e);
+});
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const point = eventPoint(e);
+  const u0 = ux(point.x), v0 = vy(point.y);
+  view.k = Math.max(kFit(), Math.min(256, view.k * Math.pow(1.0016, -e.deltaY)));
+  view.u = u0 - (point.x - VW / 2) / view.k;
+  view.v = v0 - (point.y - VH / 2) / view.k;
+  clamp(); draw();
+}, { passive: false });
+
+// ── 라이트박스(이미지 크게 보기 + 좌우 넘김)
+let lbList = [], lbIdx = 0;
+const lbEl = document.getElementById('lb'), lbImg = document.getElementById('lb-img');
+function renderLb() {
+  if (!lbList.length) return;
+  lbImg.src = imgURL(lbList[lbIdx]);
+  document.getElementById('lb-count').textContent = lbList.length > 1 ? `${lbIdx + 1} / ${lbList.length}` : '';
+  const multi = lbList.length > 1 ? '' : 'hidden';
+  document.getElementById('lb-prev').style.visibility = multi;
+  document.getElementById('lb-next').style.visibility = multi;
+}
+function lbNotify(open) { try { parent.postMessage({ type: 'tachyon-lb', open }, '*'); } catch (e) {} }
+function openLb(list, i, title) { lbList = list; lbIdx = i || 0;
+  document.getElementById('lb-title').textContent = title || '';
+  renderLb(); lbEl.classList.add('open'); lbNotify(true); }
+function lbGo(d) { if (lbList.length) { lbIdx = (lbIdx + d + lbList.length) % lbList.length; renderLb(); } }
+function closeLb() { lbEl.classList.remove('open'); lbImg.src = ''; lbNotify(false); }
+document.getElementById('lb-prev').onclick = e => { e.stopPropagation(); lbGo(-1); };
+document.getElementById('lb-next').onclick = e => { e.stopPropagation(); lbGo(1); };
+document.getElementById('lb-close').onclick = e => { e.stopPropagation(); closeLb(); };
+lbEl.addEventListener('click', e => { if (e.target === lbEl) closeLb(); });
+addEventListener('keydown', e => {
+  if (!lbEl.classList.contains('open')) return;
+  if (e.key === 'ArrowLeft') lbGo(-1);
+  else if (e.key === 'ArrowRight') lbGo(1);
+  else if (e.key === 'Escape') closeLb();
+});
+let lbSwipe = null;
+lbEl.addEventListener('pointerdown', e => { lbSwipe = e.clientX; });
+lbEl.addEventListener('pointerup', e => {
+  if (lbSwipe == null) return;
+  const dx = e.clientX - lbSwipe; lbSwipe = null;
+  if (Math.abs(dx) > 40) lbGo(dx < 0 ? 1 : -1);
+});
+
+let toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.opacity = 1;
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.style.opacity = 0, 1600);
+}
+
+function eventPoint(e) {
+  const rect = cv.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function nearest(e, R = 18) {
+  const point = eventPoint(e);
+  let best = null, bd = R * R;
+  for (const id in M.points) {
+    if (!on[id]) continue;
+    for (const p of M.points[id]) {
+      const dx = sx(toU(p.x)) - point.x, dy = sy(toV(p.z)) - point.y;
+      const d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = { p, id }; }
+    }
+  }
+  return best;
+}
+
+function hover(e) {
+  const best = nearest(e);
+  // 지식·유산·흔적은 호버 툴팁 표시 안 함(클릭으로 선택). 그 외(NPC·거점)만 호버.
+  if (!best || best.id === 'relic' || best.id === 'trace' || best.id === 'klore') { tipEl.style.display = 'none'; return; }
+  const { p, id } = best;
+  tipEl.innerHTML = `<div><b>${p.n}</b>${isDone(p) ? ' <span class="k">пройдено</span>' : ''}</div>` +
+    (CHEST.includes(id)
+      ? `<div class="k">${p.a}${p.card ? ' · знание ' + p.card : ''}</div>`
+      : `<div class="k">${M.meta.layers[id].label}</div>`);
+  tipEl.style.display = 'block';
+  const point = eventPoint(e);
+  tipEl.style.left = Math.min(point.x + 14, VW - tipEl.offsetWidth - 8) + 'px';
+  tipEl.style.top = Math.min(point.y + 16, VH - tipEl.offsetHeight - 8) + 'px';
+}
+
+// ── 레이어 UI
+const box = document.getElementById('layers');
+for (const id of ['relic', 'trace', 'klore', 'node', 'npc']) {
+  if (!M.points[id]) continue;
+  const L = M.meta.layers[id];
+  const el = document.createElement('label');
+  el.className = 'layer';
+  el.innerHTML = `<input type="checkbox" checked>` +
+    `<span class="dot" style="background:${L.color}"></span>` +
+    `<span class="nm">${L.label}</span><span class="ct">${M.points[id].length}</span>`;
+  el.querySelector('input').onchange = e => { on[id] = e.target.checked; search(); draw(); };
+  box.appendChild(el);
+}
+
+// ── 검색
+const ROMAN = { I: 1, V: 5, X: 10, L: 50, C: 100 };
+function fromRoman(s) {
+  let t = 0;
+  for (let i = 0; i < s.length; i++) {
+    const a = ROMAN[s[i]], b = ROMAN[s[i + 1]];
+    if (!a) return null;
+    t += (b && a < b) ? -a : a;
+  }
+  return t || null;
+}
+
+function focusPoint(p, id) {
+  view.k = Math.max(view.k, 70);
+  view.u = toU(p.x); view.v = toV(p.z);
+  clamp(); select(p, id);
+}
+
+function search() {
+  const raw = document.getElementById('q').value.trim();
+  const hits = document.getElementById('hits');
+  hits.innerHTML = '';
+  if (!raw) return;
+  const s = raw.toUpperCase().replace(/\s+/g, '');
+  let kind = null;
+  if (s.includes('НАСЛЕДИЕ') || s.includes('РЕЛИКВИЯ')) kind = '유산';
+  else if (s.includes('СЛЕД')) kind = '흔적';
+  const rest = s.replace(/НАСЛЕДИЕ|РЕЛИКВИЯ|СЛЕД/g, '');
+  const num = /^\d+$/.test(rest) ? +rest : (/^[IVXLC]+$/.test(rest) ? fromRoman(rest) : null);
+
+  const out = [];
+  for (const id of ['relic', 'trace', 'klore', 'node', 'npc']) {
+    if (!on[id] || !M.points[id]) continue;
+    for (const p of M.points[id]) {
+      const hay = ((p.n || '') + ' ' + (p.a || '')).toUpperCase();
+      let ok;
+      if (p.kind) {                              // 타키온 상자
+        if (kind && p.kind !== kind) continue;
+        if (num != null) ok = p.num === num;     // '유산 46' / '흔적 XLVI' / '46'
+        else if (rest) ok = hay.includes(rest);  // 지역명 등
+        else ok = !!kind;                        // '유산' 만 → 유산 전부
+      } else {                                   // NPC·거점
+        if (kind || num != null) continue;
+        ok = !!rest && hay.includes(rest);
+      }
+      if (!ok) continue;
+      out.push({ p, id });
+      if (out.length > 40) break;
+    }
+  }
+  if (!out.length) { hits.innerHTML = '<div class="none">Ничего не найдено</div>'; return; }
+  for (const h of out.slice(0, 12)) {
+    const d = document.createElement('div');
+    if (isDone(h.p)) d.className = 'off';
+    d.innerHTML = `<span class="dot" style="background:${M.meta.layers[h.id].color}"></span>` +
+      `<span>${h.p.n}</span><span class="a">${h.p.a || ''}</span>`;
+    d.onclick = () => { focusPoint(h.p, h.id); draw(); };
+    hits.appendChild(d);
+  }
+}
+document.getElementById('q').addEventListener('input', search);
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.querySelector('#hits div:not(.none)')?.click();
+  if (e.key === 'Escape') { e.target.value = ''; search(); }
+});
+
+// ── 진행도
+// 완료 시 얻는 '아그리스의 금주화' 개수 — 유산은 전부 10개, 흔적은 번호별로 다름.
+const COIN_TRACE = {1:15,2:15,3:15,4:20,5:25,6:25,7:25,8:30,9:30,10:25,16:15,17:15,18:15,19:15,20:25,21:25,22:25,23:25,24:30,25:25,31:15,32:15,33:15,34:30,35:25,36:30,37:30,38:30,39:30,40:20,46:15,47:15,48:15,49:30,50:30,51:25,52:30,53:30,54:30,55:30,61:15,62:15,63:15,64:30,65:30,66:30,67:30,68:25,69:30,70:30,76:15,77:15,78:15,79:30,80:25,81:25,82:25,83:25,84:25,85:30};
+function coinOf(p, id) { return id === 'relic' ? 10 : id === 'trace' ? (COIN_TRACE[p.num] || 0) : 0; }
+function coinStats() {
+  let earned = 0, total = 0;
+  for (const p of (M.points.relic || [])) { const v = 10;                    total += v; if (isDone(p)) earned += v; }
+  for (const p of (M.points.trace || [])) { const v = COIN_TRACE[p.num] || 0; total += v; if (isDone(p)) earned += v; }
+  return { earned, total, pct: total ? Math.round(earned / total * 100) : 0 };
+}
+
+function progress() {
+  const tot = new Set(DONEABLE.map(keyOf));
+  const el = document.getElementById('prog');
+  const per = (k, label) => {
+    const all = [...tot].filter(t => t.startsWith(k)).length;
+    const got = [...DONE].filter(t => t.startsWith(k) && tot.has(t)).length;
+    const pct = all ? Math.round(got / all * 100) : 0;
+    return `<div class="prog-row"><b class="prog-k">${label}</b>: <b>${got}</b>/${all} <span class="prog-pct">(${pct}%)</span></div>`;
+  };
+  const c = coinStats();
+  const coinRow = `<div class="prog-coin"><img class="prog-coin-ic" src="${imgURL('img/00890085.webp')}" alt="Золотая монета Агриса">` +
+    `<b>Монеты</b>: <b>${c.earned}</b>/${c.total} <span class="prog-pct">(${c.pct}%)</span></div>`;
+  el.innerHTML = coinRow + `<div class="prog-h">Прогресс</div>${per('유산', 'Наследие')}${per('흔적', 'Следы')}${per('지식', 'Знания')}`;
+  _updateResetBtn();
+}
+
+// 좌측 박스 접기/펼치기(제목 클릭)
+document.getElementById('ui-head').addEventListener('click', () => {
+  const collapsed = document.getElementById('ui').classList.toggle('collapsed');
+  document.getElementById('ui-caret').textContent = collapsed ? 'Развернуть' : 'Свернуть';
+});
+document.getElementById('ui-head').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); }
+});
+document.getElementById('btn-fit').onclick = () => {
+  view.u = (BOX.u0 + BOX.u1) / 2; view.v = (BOX.v0 + BOX.v1) / 2;
+  view.k = kFit(); sel = null; clamp(); draw();
+};
+// 완료된 게 없으면 '전체 완료', 하나라도 있으면 '전체 초기화'
+function _updateResetBtn() {
+  document.getElementById('btn-reset').textContent = DONE.size ? 'Сбросить всё' : 'Отметить всё';
+}
+document.getElementById('btn-reset').onclick = () => {
+  if (DONE.size) {                                   // 하나라도 완료됨 → 전체 초기화
+    if (!confirm(`Удалить все отметки о прохождении (${DONE.size})?`)) return;
+    DONE.clear();
+  } else {                                           // 아무것도 없음 → 전체 완료
+    if (!confirm('Отметить все наследия, следы и знания как пройденные?')) return;
+    DONE = new Set(DONEABLE.filter(p => p.kind).map(keyOf));
+  }
+  saveDone(); progress(); search(); draw();
+};
+
+// 완료 데이터 파일로 저장(내보내기) — 컴퓨터 옮길 때 사용
+document.getElementById('btn-export').onclick = () => {
+  const data = { app: 'tachyon-done', version: 1, saved: new Date().toISOString(), done: [...DONE] };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+  const a = document.createElement('a');
+  a.href = url; a.download = `тахион_прогресс_${stamp}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(`Сохранено отметок: ${DONE.size}`);
+};
+// 완료 데이터 파일에서 불러오기(가져오기)
+document.getElementById('btn-import').onclick = () => document.getElementById('file-import').click();
+document.getElementById('file-import').onchange = (e) => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';                          // 같은 파일 다시 선택 가능하게
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const parsed = JSON.parse(r.result);
+      const arr = Array.isArray(parsed) ? parsed : (parsed && parsed.done);
+      if (!Array.isArray(arr)) throw new Error('Неверный формат');
+      DONE = new Set(arr.filter(x => typeof x === 'string'));
+      saveDone(); progress(); search(); draw();
+      toast(`Загружено отметок: ${DONE.size}`);
+    } catch (err) {
+      toast('Не удалось загрузить: неверный файл');
+    }
+  };
+  r.readAsText(f);
+};
+
+// 맵·이미지 우클릭 저장 방지
+addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('dragstart', e => e.preventDefault());
+
+addEventListener('resize', resize);
+new ResizeObserver(resize).observe(stage);
+// 전체화면 진입/해제 시 캔버스 백킹 스토어를 새 크기로 다시 잡아준다(안 하면 글씨/마커가 흐려짐).
+document.addEventListener('fullscreenchange', () => { resize(); setTimeout(resize, 80); });
+document.addEventListener('webkitfullscreenchange', () => { resize(); setTimeout(resize, 80); });
+progress();
+resize();
+document.getElementById('btn-fit').click();
+</script>
+</body>
+</html>
