@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const context = vm.createContext({ window: {} });
 
-for (const relativePath of ['data/tiles.js', 'data/markers.js', 'data/images.js', 'data/ru.js']) {
+for (const relativePath of ['data/tiles.js', 'data/markers.js', 'data/images.js', 'data/ru.js', 'data/progress.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, relativePath), 'utf8'), context, { filename: relativePath });
 }
 
@@ -44,6 +44,8 @@ for (const layer of Object.values(MARKERS.meta.layers)) {
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.includes('<html lang="ru">'), 'не задан язык страницы ru');
 assert(html.includes('data/ru.js'), 'не подключена русская локализация');
+assert(html.includes('data/progress.js'), 'не подключён совместимый импорт прогресса');
+assert(html.includes('TACHYON_PROGRESS.parse'), 'импорт не использует совместимый парсер прогресса');
 assert(html.includes('https://www.korbdo.co.kr/#tachyon'), 'не указана страница разработчика оригинальной карты');
 assert(html.includes('Оригинальная карта принадлежит разработчику'), 'нет явного указания владельца оригинальной карты');
 assert(html.includes('id="map-stage"'), 'нет центрированного контейнера карты');
@@ -54,6 +56,25 @@ assert(html.includes('stage.clientWidth'), 'canvas не привязан к ши
 assert(html.includes('stage.clientHeight'), 'canvas не привязан к высоте контейнера');
 assert(!html.includes('cloudflareinsights.com'), 'остался внешний скрипт Cloudflare');
 assert(!html.includes('rocket-loader'), 'остался Cloudflare Rocket Loader');
+
+const validProgressKeys = ['유산-14', '흔적-4', '지식-1059420_817570'];
+const koreanProgress = context.window.TACHYON_PROGRESS.parse(
+  JSON.stringify({ app: 'tachyon-done', version: 1, done: ['유산-14', '흔적-4'] }),
+  validProgressKeys
+);
+assert(koreanProgress.done.join('|') === '유산-14|흔적-4', 'не импортируются ключи корейской карты');
+const russianProgress = context.window.TACHYON_PROGRESS.parse(
+  JSON.stringify({ done: ['Наследие-14', 'След-4', 'Знания-1059420_817570'] }),
+  validProgressKeys
+);
+assert(russianProgress.done.join('|') === validProgressKeys.join('|'), 'не нормализуются русские ключи прогресса');
+let oversizedProgressRejected = false;
+try {
+  context.window.TACHYON_PROGRESS.parse(JSON.stringify(new Array(1001).fill('유산-14')), validProgressKeys);
+} catch (error) {
+  oversizedProgressRejected = true;
+}
+assert(oversizedProgressRejected, 'импорт не ограничивает чрезмерно большой список прогресса');
 
 const workflowPath = path.join(root, '.github/workflows/pages.yml');
 assert(fs.existsSync(workflowPath), 'нет workflow для GitHub Pages');

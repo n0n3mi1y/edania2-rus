@@ -197,6 +197,7 @@
 <script src="data/markers.js"></script>
 <script src="data/images.js"></script>
 <script src="data/ru.js"></script>
+<script src="data/progress.js"></script>
 <script>
 // index.html 과 같은 데이터/타일을 쓰되 에다니아 영역 밖으로 못 나가게 잠근 버전.
 // + 검색 / 습득 완료 체크(localStorage).
@@ -718,15 +719,15 @@ document.getElementById('file-import').onchange = (e) => {
   const f = e.target.files && e.target.files[0];
   e.target.value = '';                          // 같은 파일 다시 선택 가능하게
   if (!f) return;
+  if (f.size > 1024 * 1024) { toast('Не удалось загрузить: файл слишком большой'); return; }
   const r = new FileReader();
   r.onload = () => {
     try {
-      const parsed = JSON.parse(r.result);
-      const arr = Array.isArray(parsed) ? parsed : (parsed && parsed.done);
-      if (!Array.isArray(arr)) throw new Error('Неверный формат');
-      DONE = new Set(arr.filter(x => typeof x === 'string'));
+      const imported = window.TACHYON_PROGRESS.parse(r.result, DONEABLE.map(keyOf));
+      DONE = new Set(imported.done);
       saveDone(); progress(); search(); draw();
-      toast(`Загружено отметок: ${DONE.size}`);
+      const skipped = imported.skipped ? `, пропущено: ${imported.skipped}` : '';
+      toast(`Загружено отметок: ${DONE.size}${skipped}`);
     } catch (err) {
       toast('Не удалось загрузить: неверный файл');
     }
