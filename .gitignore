@@ -2,3 +2,64 @@
 Thumbs.db
 *.log
 __pycache__/
+
+# BEGIN CLINE GIT SAFETY
+# IDE and user-local files
+.idea/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build outputs and dependency caches
+bin/
+obj/
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+dist/
+out/
+target/
+node_modules/
+coverage/
+TestResults/
+.pytest_cache/
+__pycache__/
+.qa/
+.tmp-ui-evidence/
+.codex-tmp/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+*.cache
+$null
+reports/completions/
+skillopt-data/
+skillopt-runs/
+skillopt-upstream-cache/
+model-role-runs/
+.DS_Store
+Thumbs.db
+
+# Local environment and secret material
+.env
+.env.*
+!.env.example
+!.env.*.example
+telegram-notify.json
+.telegram-notify-state.json
+.completion-monitor-state.json
+.git-safety/git-safety-state.json
+*.pfx
+*.p12
+*.pem
+*.key
+*.secrets.json
+secrets.json
+
+# Cline local safety state
+.cline-git-safety-state.json
+# END CLINE GIT SAFETY
