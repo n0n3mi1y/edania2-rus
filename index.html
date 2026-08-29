@@ -84,7 +84,7 @@
     display: none; white-space: nowrap; z-index: 5; }
   #tip .k, .k { color: var(--dim); font-size: 11px; }
 
-  #sel { display: none; padding: 9px 11px; width: 210px; z-index: 6; }
+  #sel { display: none; padding: 9px 11px; width: min(280px, calc(100vw - 16px)); z-index: 6; }
   #sel .t { font-weight: 600; margin-bottom: 2px; }
   #sel .sel-coin { display: flex; align-items: center; gap: 5px; color: var(--fg); font-size: 12px; }
   #sel .sel-coin .prog-coin-ic { width: 14px; height: 14px; }
@@ -99,6 +99,24 @@
   #sel-imgs img { width: 64px; height: 64px; object-fit: cover; border-radius: 6px;
     border: 1px solid var(--line); cursor: zoom-in; background: #0d1117; }
   #sel-imgs img:hover { border-color: var(--accent); }
+  #sel-imgs .video-thumb { position: relative; width: 64px; height: 64px; flex: none;
+    overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #0d1117; }
+  #sel-imgs .video-thumb img { width: 100%; height: 100%; border: 0; border-radius: 0; cursor: pointer; }
+  #sel-imgs .video-thumb::after { content: '▶'; position: absolute; inset: 0; display: grid;
+    place-items: center; color: #fff; font-size: 20px; text-shadow: 0 1px 5px #000; pointer-events: none; }
+
+  #sel-quests { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--line); }
+  #sel-quests:empty { display: none; }
+  #sel-quests .q-sum { display: flex; justify-content: space-between; gap: 8px;
+    margin-bottom: 3px; color: var(--dim); font-size: 11px; }
+  #sel-quests .q-sum b { color: var(--fg); }
+  #sel-quests .q-row { display: flex; align-items: center; gap: 7px; padding: 4px 2px;
+    border-radius: 5px; cursor: pointer; user-select: none; font-size: 12px; }
+  #sel-quests .q-row:hover { background: #ffffff10; }
+  #sel-quests .q-row input { flex: none; margin: 0; accent-color: var(--accent); }
+  #sel-quests .q-row .q-n { flex: 1; }
+  #sel-quests .q-row .q-c { flex: none; color: var(--accent); font-size: 11px; }
+  #sel-quests .q-row.on .q-n { color: var(--dim); text-decoration: line-through; }
 
   /* 이미지 크게 보기(라이트박스) */
   #lb { position: fixed; inset: 0; background: #000000e8; display: none;
@@ -168,6 +186,7 @@
 <div id="sel" class="panel">
   <div class="t" id="sel-t"></div>
   <div class="k" id="sel-s"></div>
+  <div id="sel-quests"></div>
   <div id="sel-imgs"></div>
   <div class="row">
     <button id="sel-done"></button>
@@ -196,6 +215,7 @@
 <script src="data/tiles.js"></script>
 <script src="data/markers.js"></script>
 <script src="data/images.js"></script>
+<script src="data/videos.js"></script>
 <script src="data/ru.js"></script>
 <script src="data/progress.js"></script>
 <script>
@@ -222,14 +242,18 @@ const CHEST = ['relic', 'trace'];
 const ALLCHEST = CHEST.flatMap(id => M.points[id] || []);
 // 마커 반지름 — 상자를 다른 마커보다 살짝만 크게
 const radius = id => CHEST.includes(id) ? Math.max(2.8, Math.min(6.5, view.k * .22))
+                  : id === 'quest' ? Math.max(3.2, Math.min(7.0, view.k * .24))
                                         : Math.max(2.2, Math.min(5.0, view.k * .17));
 
 const on = {};
 for (const id in M.points) on[id] = true;
+const questAsNode = () => (!on.quest && on.node) ? (M.points.quest || []) : [];
+const nodeList = () => (M.points.node || []).concat(questAsNode());
 
 // 지식(klore)도 완료 대상 — 지식 id(k)는 여러 NPC가 공유하므로, NPC '위치'별로 개별 완료 처리.
 //  num 은 좌표 기반 고유 키(데이터 순서 바뀌어도 저장값 안정).
 if (M.points.klore) M.points.klore.forEach(p => { if (!p.kind) { p.kind = '지식'; p.num = Math.round(p.x) + '_' + Math.round(p.z); } });
+if (M.points.quest) M.points.quest.forEach(p => { if (!p.kind) { p.kind = '퀘스트'; p.num = Math.round(p.x) + '_' + Math.round(p.z); } });
 // 완료 집계 대상: 유산·흔적·지식
 const DONEABLE = ['relic', 'trace', 'klore'].flatMap(id => M.points[id] || []);
 
@@ -246,13 +270,19 @@ const saveDone = () => {
   try { localStorage.setItem(STORE, value); } catch (e) {}
   try { _setCookie(STORE, value); } catch (e) {}
 };
-const isDone = p => p.kind && DONE.has(keyOf(p));
+const qKey = (p, i) => `${keyOf(p)}#${i}`;
+const qDone = (p, i) => DONE.has(qKey(p, i));
+const qCount = p => (p.quests || []).filter((_, i) => qDone(p, i)).length;
+const questAll = p => !!(p.quests && p.quests.length) && qCount(p) === p.quests.length;
+const isDone = p => p.kind && (p.quests ? questAll(p) : DONE.has(keyOf(p)));
 
 // ── 마커별 업로드 이미지(지식/유산/흔적). keyOf 우선, 없으면 이름 키(예: 기가고드 전용 폴더).
 const IMG = window.IMAGES || {};
 const imagesFor = p => IMG[keyOf(p)] || IMG['name-' + (p.assetName || p.n || '')] || [];
+const VID = window.VIDEOS || {};
+const videoFor = p => VID[keyOf(p)] || '';
 // 이미지 파일 캐시버스터 — 이미지 교체 시 이 숫자만 올리면 새로 받는다.
-const IMGV = '1786619717';
+const IMGV = '1787724096';
 const imgURL = src => encodeURI(src) + '?v=' + IMGV;
 
 // ── 볼 수 있는 범위 = 마커 전체를 감싸는 상자 + 여유
@@ -337,16 +367,16 @@ function draw() {
   }
 
   // ── 마커
-  for (const id of ['npc', 'node', 'klore', 'trace', 'relic']) {
+  for (const id of ['npc', 'node', 'klore', 'trace', 'relic', 'quest']) {
     if (!on[id] || !M.points[id]) continue;
     const r = radius(id);
-    const col = M.meta.layers[id].color;
     ctx.lineWidth = Math.max(1, r * .35);
     for (const p of M.points[id]) {
       const X = sx(toU(p.x)), Y = sy(toV(p.z));
       if (X < -20 || Y < -20 || X > VW + 20 || Y > VH + 20) continue;
       ctx.globalAlpha = isDone(p) ? .45 : 1;
-      ctx.fillStyle = col; ctx.strokeStyle = '#0b0f14cc';
+      ctx.fillStyle = id === 'quest' && questAll(p) ? M.meta.layers.node.color : M.meta.layers[id].color;
+      ctx.strokeStyle = '#0b0f14cc';
       ctx.beginPath(); ctx.arc(X, Y, r, 0, 7); ctx.fill(); ctx.stroke();
       ctx.globalAlpha = 1;
       if (sel && sel.p === p) {                  // 선택 표시
@@ -390,12 +420,33 @@ function draw() {
     }
   }
 
+  // ── NPC заданий: управляющий узлом с отдельным списком наград
+  if (on.quest && M.points.quest) {
+    for (const p of M.points.quest) {
+      const X = sx(toU(p.x)), Y = sy(toV(p.z)), r = radius('quest');
+      if (X < 0 || Y < 0 || X > VW || Y > VH) continue;
+      ctx.textAlign = 'center'; ctx.strokeStyle = '#0b0f14e6';
+      ctx.textBaseline = 'bottom'; ctx.lineWidth = 3;
+      ctx.font = '600 ' + Math.round(11 * FS) + 'px system-ui, sans-serif';
+      ctx.fillStyle = '#dbe7c9';
+      const area = p.n.split('—').pop().trim();
+      ctx.strokeText(area, X, Y - r - 4); ctx.fillText(area, X, Y - r - 4);
+      if (!questAll(p)) {
+        ctx.textBaseline = 'top'; ctx.lineWidth = 3.5;
+        ctx.font = '700 ' + Math.round(12.5 * FS) + 'px system-ui, sans-serif';
+        ctx.fillStyle = M.meta.layers.quest.color;
+        const npc = p.n.split('—')[0].trim();
+        ctx.strokeText(npc, X, Y + r + 3); ctx.fillText(npc, X, Y + r + 3);
+      }
+    }
+  }
+
   // ── 거점 이름
   if (on.node && M.points.node) {
     ctx.font = '600 ' + Math.round(11 * FS) + 'px system-ui, sans-serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
     ctx.lineWidth = 3; ctx.strokeStyle = '#0b0f14cc'; ctx.fillStyle = '#dbe7c9';
-    for (const p of M.points.node) {
+    for (const p of nodeList()) {
       const X = sx(toU(p.x)), Y = sy(toV(p.z));
       if (X < 0 || Y < 0 || X > VW || Y > VH) continue;
       const t = p.n.split('—').pop().trim();
@@ -416,19 +467,45 @@ function placeSel() {
 
 function select(p, id) {
   sel = { p, id };
+  if (VW < 700) {
+    document.getElementById('ui').classList.add('collapsed');
+    document.getElementById('ui-caret').textContent = 'Развернуть';
+  }
   document.getElementById('sel-t').textContent = p.n;
   const base = CHEST.includes(id) ? `${p.a}${p.card ? ' · знание ' + p.card : ''}`
-                                  : `${M.meta.layers[id].label}`;
-  const coin = CHEST.includes(id) ? coinOf(p, id) : null;
+                                  : (p.quests ? `${M.meta.layers[id].label} · ${p.a}` : `${M.meta.layers[id].label}`);
+  const coin = CHEST.includes(id) ? coinOf(p, id) : (p.quests ? (p.coin || 0) : null);
   document.getElementById('sel-s').innerHTML =
     (coin != null ? `<div class="sel-coin"><img class="prog-coin-ic" src="${imgURL('img/00890085.webp')}" alt="Золотая монета Агриса">Золотые монеты: ${coin}</div>` : '') +
     `<div class="sel-area">${base}</div>`;
+  const questList = document.getElementById('sel-quests');
+  questList.innerHTML = '';
+  if (p.quests && p.quests.length) {
+    const earned = p.quests.reduce((total, quest, i) => total + (qDone(p, i) ? (quest.c || 0) : 0), 0);
+    const sum = document.createElement('div');
+    sum.className = 'q-sum';
+    sum.innerHTML = `<span>Прогресс заданий</span><span><b>${qCount(p)}</b>/${p.quests.length} · <b>${earned}</b>/${p.coin || 0}</span>`;
+    questList.appendChild(sum);
+    p.quests.forEach((quest, i) => {
+      const row = document.createElement('label');
+      row.className = 'q-row' + (qDone(p, i) ? ' on' : '');
+      row.innerHTML = `<input type="checkbox"${qDone(p, i) ? ' checked' : ''}>` +
+        `<span class="q-n">${quest.n}</span><span class="q-c">+${quest.c || 0}</span>`;
+      row.querySelector('input').onchange = event => {
+        const key = qKey(p, i);
+        event.target.checked ? DONE.add(key) : DONE.delete(key);
+        saveDone(); progress(); select(p, id);
+      };
+      questList.appendChild(row);
+    });
+  }
   const b = document.getElementById('sel-done');
   b.style.display = p.kind ? '' : 'none';
   b.textContent = isDone(p) ? 'Отменить отметку' : 'Отметить пройденным';
   b.classList.toggle('on', isDone(p));
   // 섬네일
   const imgs = imagesFor(p);
+  const video = videoFor(p);
   const gal = document.getElementById('sel-imgs');
   gal.innerHTML = '';
   imgs.forEach((src, i) => {
@@ -437,11 +514,28 @@ function select(p, id) {
     im.onclick = () => openLb(imgs, i, p.n);
     gal.appendChild(im);
   });
+  if (video) {
+    const link = document.createElement('a');
+    link.className = 'video-thumb';
+    link.href = `https://youtu.be/${video}`;
+    link.target = '_blank'; link.rel = 'noopener noreferrer';
+    link.setAttribute('aria-label', 'Открыть видеоинструкцию');
+    const thumb = document.createElement('img');
+    thumb.src = `https://i.ytimg.com/vi/${video}/mqdefault.jpg`;
+    thumb.alt = '';
+    link.appendChild(thumb); gal.appendChild(link);
+  }
   draw();
 }
 
 document.getElementById('sel-done').onclick = () => {
   if (!sel || !sel.p.kind) return;
+  if (sel.p.quests && sel.p.quests.length) {
+    const all = questAll(sel.p);
+    sel.p.quests.forEach((_, i) => all ? DONE.delete(qKey(sel.p, i)) : DONE.add(qKey(sel.p, i)));
+    saveDone(); progress(); select(sel.p, sel.id); draw();
+    return;
+  }
   const k = keyOf(sel.p);
   DONE.has(k) ? DONE.delete(k) : DONE.add(k);
   saveDone(); select(sel.p, sel.id); progress(); search();
@@ -568,14 +662,14 @@ function hover(e) {
 
 // ── 레이어 UI
 const box = document.getElementById('layers');
-for (const id of ['relic', 'trace', 'klore', 'node', 'npc']) {
+for (const id of ['relic', 'trace', 'quest', 'klore', 'node', 'npc']) {
   if (!M.points[id]) continue;
   const L = M.meta.layers[id];
   const el = document.createElement('label');
   el.className = 'layer';
   el.innerHTML = `<input type="checkbox" checked>` +
     `<span class="dot" style="background:${L.color}"></span>` +
-    `<span class="nm">${L.label}</span><span class="ct">${M.points[id].length}</span>`;
+    `<span class="nm">${L.label}</span><span class="ct">${id === 'quest' ? M.points[id].reduce((total, p) => total + (p.quests || []).length, 0) : M.points[id].length}</span>`;
   el.querySelector('input').onchange = e => { on[id] = e.target.checked; search(); draw(); };
   box.appendChild(el);
 }
@@ -611,7 +705,7 @@ function search() {
   const num = /^\d+$/.test(rest) ? +rest : (/^[IVXLC]+$/.test(rest) ? fromRoman(rest) : null);
 
   const out = [];
-  for (const id of ['relic', 'trace', 'klore', 'node', 'npc']) {
+  for (const id of ['relic', 'trace', 'klore', 'node', 'quest', 'npc']) {
     if (!on[id] || !M.points[id]) continue;
     for (const p of M.points[id]) {
       const hay = ((p.n || '') + ' ' + (p.a || '')).toUpperCase();
@@ -649,11 +743,14 @@ document.getElementById('q').addEventListener('keydown', e => {
 // ── 진행도
 // 완료 시 얻는 '아그리스의 금주화' 개수 — 유산은 전부 10개, 흔적은 번호별로 다름.
 const COIN_TRACE = {1:15,2:15,3:15,4:20,5:25,6:25,7:25,8:30,9:30,10:25,16:15,17:15,18:15,19:15,20:25,21:25,22:25,23:25,24:30,25:25,31:15,32:15,33:15,34:30,35:25,36:30,37:30,38:30,39:30,40:20,46:15,47:15,48:15,49:30,50:30,51:25,52:30,53:30,54:30,55:30,61:15,62:15,63:15,64:30,65:30,66:30,67:30,68:25,69:30,70:30,76:15,77:15,78:15,79:30,80:25,81:25,82:25,83:25,84:25,85:30};
-function coinOf(p, id) { return id === 'relic' ? 10 : id === 'trace' ? (COIN_TRACE[p.num] || 0) : 0; }
+const traceCoin = p => COIN_TRACE[p.num] != null ? COIN_TRACE[p.num] : (p.coin || 0);
+function coinOf(p, id) { return id === 'relic' ? 10 : id === 'trace' ? traceCoin(p) : 0; }
 function coinStats() {
   let earned = 0, total = 0;
   for (const p of (M.points.relic || [])) { const v = 10;                    total += v; if (isDone(p)) earned += v; }
-  for (const p of (M.points.trace || [])) { const v = COIN_TRACE[p.num] || 0; total += v; if (isDone(p)) earned += v; }
+  for (const p of (M.points.trace || [])) { const v = traceCoin(p);           total += v; if (isDone(p)) earned += v; }
+  for (const p of (M.points.quest || []))
+    (p.quests || []).forEach((quest, i) => { total += (quest.c || 0); if (qDone(p, i)) earned += (quest.c || 0); });
   return { earned, total, pct: total ? Math.round(earned / total * 100) : 0 };
 }
 
@@ -667,9 +764,17 @@ function progress() {
     return `<div class="prog-row"><b class="prog-k">${label}</b>: <b>${got}</b>/${all} <span class="prog-pct">(${pct}%)</span></div>`;
   };
   const c = coinStats();
+  const questRow = () => {
+    const list = M.points.quest || [];
+    const all = list.reduce((total, p) => total + (p.quests || []).length, 0);
+    if (!all) return '';
+    const got = list.reduce((total, p) => total + qCount(p), 0);
+    const pct = Math.round(got / all * 100);
+    return `<div class="prog-row"><b class="prog-k">Задания</b>: <b>${got}</b>/${all} <span class="prog-pct">(${pct}%)</span></div>`;
+  };
   const coinRow = `<div class="prog-coin"><img class="prog-coin-ic" src="${imgURL('img/00890085.webp')}" alt="Золотая монета Агриса">` +
     `<b>Монеты</b>: <b>${c.earned}</b>/${c.total} <span class="prog-pct">(${c.pct}%)</span></div>`;
-  el.innerHTML = coinRow + `<div class="prog-h">Прогресс</div>${per('유산', 'Наследие')}${per('흔적', 'Следы')}${per('지식', 'Знания')}`;
+  el.innerHTML = coinRow + `<div class="prog-h">Прогресс</div>${per('유산', 'Наследие')}${per('흔적', 'Следы')}${questRow()}${per('지식', 'Знания')}`;
   _updateResetBtn();
 }
 
@@ -694,8 +799,10 @@ document.getElementById('btn-reset').onclick = () => {
     if (!confirm(`Удалить все отметки о прохождении (${DONE.size})?`)) return;
     DONE.clear();
   } else {                                           // 아무것도 없음 → 전체 완료
-    if (!confirm('Отметить все наследия, следы и знания как пройденные?')) return;
+    if (!confirm('Отметить все наследия, следы, задания и знания как пройденные?')) return;
     DONE = new Set(DONEABLE.filter(p => p.kind).map(keyOf));
+    for (const p of (M.points.quest || []))
+      (p.quests || []).forEach((_, i) => DONE.add(qKey(p, i)));
   }
   saveDone(); progress(); search(); draw();
 };
@@ -723,7 +830,10 @@ document.getElementById('file-import').onchange = (e) => {
   const r = new FileReader();
   r.onload = () => {
     try {
-      const imported = window.TACHYON_PROGRESS.parse(r.result, DONEABLE.map(keyOf));
+      const validKeys = DONEABLE.map(keyOf);
+      for (const p of (M.points.quest || []))
+        (p.quests || []).forEach((_, i) => validKeys.push(qKey(p, i)));
+      const imported = window.TACHYON_PROGRESS.parse(r.result, validKeys);
       DONE = new Set(imported.done);
       saveDone(); progress(); search(); draw();
       const skipped = imported.skipped ? `, пропущено: ${imported.skipped}` : '';

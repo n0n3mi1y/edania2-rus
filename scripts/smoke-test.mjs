@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const context = vm.createContext({ window: {} });
 
-for (const relativePath of ['data/tiles.js', 'data/markers.js', 'data/images.js', 'data/ru.js', 'data/progress.js']) {
+for (const relativePath of ['data/tiles.js', 'data/markers.js', 'data/images.js', 'data/videos.js', 'data/ru.js', 'data/progress.js']) {
   vm.runInContext(fs.readFileSync(path.join(root, relativePath), 'utf8'), context, { filename: relativePath });
 }
 
@@ -16,8 +16,11 @@ const assert = (condition, message) => { if (!condition) failures.push(message);
 const countValues = object => Object.values(object).reduce((total, values) => total + values.length, 0);
 
 assert(countValues(TILES) === 244, `ожидалось 244 тайла, найдено ${countValues(TILES)}`);
-assert(countValues(MARKERS.points) === 244, `ожидалось 244 маркера, найдено ${countValues(MARKERS.points)}`);
-assert(countValues(IMAGES) === 349, `ожидалось 349 скриншотов, найдено ${countValues(IMAGES)}`);
+assert(countValues(MARKERS.points) === 265, `ожидалось 265 маркеров, найдено ${countValues(MARKERS.points)}`);
+assert(MARKERS.points.trace.length === 82, `ожидалось 82 следа, найдено ${MARKERS.points.trace.length}`);
+assert(MARKERS.points.quest.length === 1, `ожидалась 1 точка квестов, найдено ${MARKERS.points.quest.length}`);
+assert(MARKERS.points.quest[0]?.quests?.length === 7, 'в точке квестов должно быть 7 заданий');
+assert(countValues(IMAGES) === 415, `ожидалось 415 скриншотов, найдено ${countValues(IMAGES)}`);
 
 for (const [level, tiles] of Object.entries(TILES)) {
   for (const tile of tiles) {
@@ -35,6 +38,10 @@ for (const [layer, points] of Object.entries(MARKERS.points)) {
   for (const point of points) {
     assert(!hangul.test(point.n || ''), `не переведено название ${layer}: ${point.n}`);
     assert(!hangul.test(point.a || ''), `не переведена область ${layer}: ${point.a}`);
+    for (const quest of point.quests || []) {
+      assert(!hangul.test(quest.n || ''), `не переведён квест ${layer}: ${quest.n}`);
+      assert(!hangul.test(quest.a || ''), `не переведена область квеста ${layer}: ${quest.a}`);
+    }
   }
 }
 for (const layer of Object.values(MARKERS.meta.layers)) {
@@ -45,6 +52,9 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(html.includes('<html lang="ru">'), 'не задан язык страницы ru');
 assert(html.includes('data/ru.js'), 'не подключена русская локализация');
 assert(html.includes('data/progress.js'), 'не подключён совместимый импорт прогресса');
+assert(html.includes('data/videos.js'), 'не подключены видео новых точек');
+assert(html.includes("'quest'"), 'интерфейс не поддерживает слой квестов');
+assert(html.includes('sel-quests'), 'нет списка заданий выбранной точки');
 assert(html.includes('TACHYON_PROGRESS.parse'), 'импорт не использует совместимый парсер прогресса');
 assert(html.includes('https://www.korbdo.co.kr/#tachyon'), 'не указана страница разработчика оригинальной карты');
 assert(html.includes('Оригинальная карта принадлежит разработчику'), 'нет явного указания владельца оригинальной карты');
@@ -88,4 +98,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('OK: 244 маркера, 244 тайла и 349 скриншотов; локализация и пути проверены.');
+console.log('OK: 265 маркеров, 244 тайла и 415 скриншотов; локализация и пути проверены.');

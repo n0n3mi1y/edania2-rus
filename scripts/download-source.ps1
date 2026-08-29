@@ -1,5 +1,6 @@
 param(
-    [string]$Destination = (Split-Path -Parent $PSScriptRoot)
+    [string]$Destination = (Split-Path -Parent $PSScriptRoot),
+    [switch]$IncludeIndex
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,8 +39,25 @@ function Download-BinaryFiles {
             if (-not (Test-Path -LiteralPath $target)) {
                 $encodedSegments = @(($relativePath -split '/') | ForEach-Object { [Uri]::EscapeDataString($_) })
                 $url = $baseUrl + [string]::Join('/', $encodedSegments)
-                $bytes = $client.GetByteArrayAsync($url).GetAwaiter().GetResult()
-                [System.IO.File]::WriteAllBytes($target, $bytes)
+                $bytes = $null
+                $savedDirectly = $false
+                for ($attempt = 1; $attempt -le 5; $attempt++) {
+                    try {
+                        $bytes = $client.GetByteArrayAsync($url).GetAwaiter().GetResult()
+                        break
+                    }
+                    catch {
+                        if ($attempt -eq 5) {
+                            Invoke-WebRequest -UseBasicParsing $url -OutFile $target
+                            $savedDirectly = $true
+                            break
+                        }
+                        Start-Sleep -Milliseconds (500 * $attempt)
+                    }
+                }
+                if (-not $savedDirectly) {
+                    [System.IO.File]::WriteAllBytes($target, $bytes)
+                }
             }
 
             if (($index % 50) -eq 0 -or $index -eq $RelativePaths.Count) {
@@ -53,10 +71,25 @@ function Download-BinaryFiles {
     }
 }
 
-Save-TextFile 'index.html' ($baseUrl + 'index.html')
-Save-TextFile 'data/tiles.js' ($baseUrl + 'data/tiles.js?v=1786596824')
-Save-TextFile 'data/markers.js' ($baseUrl + 'data/markers.js?v=1786619717')
-Save-TextFile 'data/images.js' ($baseUrl + 'data/images.js?v=1786619717')
+$sourceIndex = (Invoke-WebRequest -UseBasicParsing ($baseUrl + 'index.html')).Content
+function Get-SourceAssetUrl {
+    param([string]$RelativePath)
+
+    $pattern = '<script[^>]+src=["'']([^"'']*' + [regex]::Escape($RelativePath) + '[^"'']*)["'']'
+    $match = [regex]::Match($sourceIndex, $pattern)
+    if (-not $match.Success) {
+        throw "Source index does not reference $RelativePath"
+    }
+    return ([Uri]::new([Uri]$baseUrl, $match.Groups[1].Value)).AbsoluteUri
+}
+
+if ($IncludeIndex) {
+    Save-TextFile 'index.html' ($baseUrl + 'index.html')
+}
+Save-TextFile 'data/tiles.js' (Get-SourceAssetUrl 'data/tiles.js')
+Save-TextFile 'data/markers.js' (Get-SourceAssetUrl 'data/markers.js')
+Save-TextFile 'data/images.js' (Get-SourceAssetUrl 'data/images.js')
+Save-TextFile 'data/videos.js' (Get-SourceAssetUrl 'data/videos.js')
 
 $tilesText = [System.IO.File]::ReadAllText((Join-Path $Destination 'data/tiles.js')) -replace '^window\.TILES=', '' -replace ';\s*$', ''
 $imagesText = [System.IO.File]::ReadAllText((Join-Path $Destination 'data/images.js')) -replace '^window\.IMAGES=', '' -replace ';\s*$', ''
