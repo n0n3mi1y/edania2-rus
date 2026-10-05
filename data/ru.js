@@ -160,6 +160,8 @@
         point.n = `${names[parts[0]] || parts[0]} — ${areas[parts[1]] || parts[1]}`;
       } else point.n = names[point.n] || point.n;
       if (point.a) point.a = areas[point.a] || point.a;
+      if (point.needL === '[보이데케아] 종막을 향하여') point.needL = '[Войдекия] Навстречу финалу';
+      if (point.needL === '흔적 XXVI') point.needL = 'След XXVI';
       for (const quest of point.quests || []) {
         quest.n = quests[quest.n] || quest.n;
         if (quest.a) quest.a = areas[quest.a] || quest.a;

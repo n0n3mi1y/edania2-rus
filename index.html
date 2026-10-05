@@ -282,7 +282,7 @@ const imagesFor = p => IMG[keyOf(p)] || IMG['name-' + (p.assetName || p.n || '')
 const VID = window.VIDEOS || {};
 const videoFor = p => VID[keyOf(p)] || '';
 // 이미지 파일 캐시버스터 — 이미지 교체 시 이 숫자만 올리면 새로 받는다.
-const IMGV = '1787724096';
+const IMGV = '1789974163';
 const imgURL = src => encodeURI(src) + '?v=' + IMGV;
 
 // ── 볼 수 있는 범위 = 마커 전체를 감싸는 상자 + 여유
@@ -477,7 +477,8 @@ function select(p, id) {
   const coin = CHEST.includes(id) ? coinOf(p, id) : (p.quests ? (p.coin || 0) : null);
   document.getElementById('sel-s').innerHTML =
     (coin != null ? `<div class="sel-coin"><img class="prog-coin-ic" src="${imgURL('img/00890085.webp')}" alt="Золотая монета Агриса">Золотые монеты: ${coin}</div>` : '') +
-    `<div class="sel-area">${base}</div>`;
+    `<div class="sel-area">${base}</div>` +
+    (p.needL ? `<div class="sel-area">Требуется: ${p.needL}</div>` : '');
   const questList = document.getElementById('sel-quests');
   questList.innerHTML = '';
   if (p.quests && p.quests.length) {

@@ -16,11 +16,12 @@ const assert = (condition, message) => { if (!condition) failures.push(message);
 const countValues = object => Object.values(object).reduce((total, values) => total + values.length, 0);
 
 assert(countValues(TILES) === 244, `ожидалось 244 тайла, найдено ${countValues(TILES)}`);
-assert(countValues(MARKERS.points) === 265, `ожидалось 265 маркеров, найдено ${countValues(MARKERS.points)}`);
-assert(MARKERS.points.trace.length === 82, `ожидалось 82 следа, найдено ${MARKERS.points.trace.length}`);
+assert(countValues(MARKERS.points) === 285, `ожидалось 285 маркеров, найдено ${countValues(MARKERS.points)}`);
+assert(MARKERS.points.trace.length === 92, `ожидалось 92 следа, найдено ${MARKERS.points.trace.length}`);
+assert(MARKERS.points.relic.length === 95, `ожидалось 95 наследий, найдено ${MARKERS.points.relic.length}`);
 assert(MARKERS.points.quest.length === 1, `ожидалась 1 точка квестов, найдено ${MARKERS.points.quest.length}`);
 assert(MARKERS.points.quest[0]?.quests?.length === 7, 'в точке квестов должно быть 7 заданий');
-assert(countValues(IMAGES) === 415, `ожидалось 415 скриншотов, найдено ${countValues(IMAGES)}`);
+assert(countValues(IMAGES) === 455, `ожидалось 455 скриншотов, найдено ${countValues(IMAGES)}`);
 
 for (const [level, tiles] of Object.entries(TILES)) {
   for (const tile of tiles) {
@@ -38,6 +39,7 @@ for (const [layer, points] of Object.entries(MARKERS.points)) {
   for (const point of points) {
     assert(!hangul.test(point.n || ''), `не переведено название ${layer}: ${point.n}`);
     assert(!hangul.test(point.a || ''), `не переведена область ${layer}: ${point.a}`);
+    assert(!hangul.test(point.needL || ''), `не переведено условие ${layer}: ${point.needL}`);
     for (const quest of point.quests || []) {
       assert(!hangul.test(quest.n || ''), `не переведён квест ${layer}: ${quest.n}`);
       assert(!hangul.test(quest.a || ''), `не переведена область квеста ${layer}: ${quest.a}`);
@@ -98,4 +100,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('OK: 265 маркеров, 244 тайла и 415 скриншотов; локализация и пути проверены.');
+console.log('OK: 285 маркеров, 244 тайла и 455 скриншотов; локализация и пути проверены.');

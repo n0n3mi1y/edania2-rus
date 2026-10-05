@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$baseUrl = 'https://www.korbdo.co.kr/Edania2/'
+$baseUrl = 'https://www.korbdo.co.kr/map/Edania2/'
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 Add-Type -AssemblyName System.Net.Http
 
