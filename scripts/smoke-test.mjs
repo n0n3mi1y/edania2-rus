@@ -16,12 +16,12 @@ const assert = (condition, message) => { if (!condition) failures.push(message);
 const countValues = object => Object.values(object).reduce((total, values) => total + values.length, 0);
 
 assert(countValues(TILES) === 244, `ожидалось 244 тайла, найдено ${countValues(TILES)}`);
-assert(countValues(MARKERS.points) === 285, `ожидалось 285 маркеров, найдено ${countValues(MARKERS.points)}`);
-assert(MARKERS.points.trace.length === 92, `ожидалось 92 следа, найдено ${MARKERS.points.trace.length}`);
+assert(countValues(MARKERS.points) === 293, `ожидалось 293 маркера, найдено ${countValues(MARKERS.points)}`);
+assert(MARKERS.points.trace.length === 100, `ожидалось 100 следов, найдено ${MARKERS.points.trace.length}`);
 assert(MARKERS.points.relic.length === 95, `ожидалось 95 наследий, найдено ${MARKERS.points.relic.length}`);
 assert(MARKERS.points.quest.length === 1, `ожидалась 1 точка квестов, найдено ${MARKERS.points.quest.length}`);
 assert(MARKERS.points.quest[0]?.quests?.length === 7, 'в точке квестов должно быть 7 заданий');
-assert(countValues(IMAGES) === 455, `ожидалось 455 скриншотов, найдено ${countValues(IMAGES)}`);
+assert(countValues(IMAGES) === 481, `ожидалось 481 скриншот, найдено ${countValues(IMAGES)}`);
 
 for (const [level, tiles] of Object.entries(TILES)) {
   for (const tile of tiles) {
@@ -100,4 +100,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log('OK: 285 маркеров, 244 тайла и 455 скриншотов; локализация и пути проверены.');
+console.log('OK: 293 маркера, 244 тайла и 481 скриншот; локализация и пути проверены.');
